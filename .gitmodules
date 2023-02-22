@@ -1,0 +1,3 @@
+[submodule "third-party/obs-StreamFX"]
+      path = third-party/obs-StreamFX
+      url = https://github.com/Xaymar/obs-StreamFX.git
