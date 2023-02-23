@@ -49,24 +49,6 @@ jobs:
             CMAKE_GENERATOR: "Visual Studio 17 2022"
             CMAKE_GENERATOR_PLATFORM: "x64"
 
-          # MacOS supports Clang
-          - runner: macos-12
-            name: "MacOS"
-            package_name: "macos"
-            CMAKE_GENERATOR: "Xcode"
-            CMAKE_OSX_DEPLOYMENT_TARGET: "10.15"
-            CMAKE_OSX_ARCHITECTURES: "x86_64;arm64"
-
-          # Ubuntu needs version-specific binaries
-          - runner: ubuntu-22.04
-            name: "Ubuntu 22.04"
-            package_name: "ubuntu-22"
-            CMAKE_GENERATOR: "Ninja"
-          - runner: ubuntu-20.04
-            name: "Ubuntu 20.04"
-            package_name: "ubuntu-20"
-            CMAKE_GENERATOR: "Ninja"
-
     runs-on: "${{ matrix.runner }}"
     name: "${{ matrix.name }} (${{ matrix.generator }}, Qt${{ matrix.qt }})"
     env:
