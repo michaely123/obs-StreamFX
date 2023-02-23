@@ -377,7 +377,7 @@ jobs:
         packagesbuild "${{ github.workspace }}/build/debug/installer.pkgproj"
         packagesbuild "${{ github.workspace }}/build/release/installer.pkgproj"
     - name: "Artifacts"
-      uses: actions/upload-artifact@v1
+      uses: actions/upload-artifact@v3
       with:
         name: "${{ matrix.runner }}-${{ matrix.generator }}-qt${{ matrix.qt }}"
         path: "${{ github.workspace }}/build/package"
