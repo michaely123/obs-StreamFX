@@ -53,7 +53,7 @@ jobs:
       uses: actions/checkout@v3
       with:
         repository: Xaymar/obs-StreamFX
-        ref: 0.12.0a106
+        ref: 0.12.0a117
         submodules: recursive
         fetch-depth: 0
         
