@@ -2,4 +2,6 @@
 
 [![Build](https://github.com/michaely123/obs-StreamFX/actions/workflows/main.yml/badge.svg?branch=main)](https://github.com/michaely123/obs-StreamFX/actions/workflows/main.yml)
 
-This repository is for my own testing purposes. Trying to build StreamFX and to automate GitHub releases.
+Please visit the developers GitHub at https://github.com/Xaymar/obs-StreamFX
+
+This repository is for my own testing purposes. I'm trying to compile StreamFX and automating GitHub releases.
