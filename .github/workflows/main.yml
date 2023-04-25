@@ -9,7 +9,7 @@ on:
       - '*'
 
 concurrency:
-  group: build-${{ github.ref }}
+  group: build-${{ github.ref_name }}
   cancel-in-progress: true
 
 env:
