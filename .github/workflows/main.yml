@@ -54,7 +54,6 @@ jobs:
       with:
         repository: Xaymar/obs-StreamFX
         submodules: recursive
-        ref: patch/improved_initializer
         fetch-depth: 0
 
     - name: "Install LLVM/Clang (Windows)"
