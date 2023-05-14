@@ -20,18 +20,27 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        runner: [ "windows-2022" ]
-        name: [ "Windows" ]
-        compiler: [ "MSVC"]
+        runner: [ "windows-2022"]
         qt: [ 6 ]
+        generator: [ "MSVC", "GCC", "Clang" ]
+        exclude:
+          - runner: windows-2022
+            generator: GCC
+          - runner: windows-2022
+            generator: Clang
+          - runner: windows-2022
+            qt: 5
         include:
-          - compiler: "MSVC"
+          # Windows supports MSVC
+          - runner: windows-2022
+            name: "Windows"
+            package_name: "windows"
             CMAKE_SYSTEM_VERSION: "10.0.20348.0"
             CMAKE_GENERATOR: "Visual Studio 17 2022"
             CMAKE_GENERATOR_PLATFORM: "x64"
 
     runs-on: "${{ matrix.runner }}"
-    name: "${{ matrix.name }} (${{ matrix.compiler }}, Qt${{ matrix.qt }})"
+    name: "${{ matrix.name }} (${{ matrix.generator }}, Qt${{ matrix.qt }})"
     env:
       CMAKE_GENERATOR: "${{ matrix.CMAKE_GENERATOR }}"
       CMAKE_GENERATOR_PLATFORM: "${{ matrix.CMAKE_GENERATOR_PLATFORM }}"
@@ -98,11 +107,11 @@ jobs:
 
         # Compiler Setup
         if [[ "${{ matrix.runner }}" = ubuntu* ]]; then
-          if [[ "${{ matrix.compiler }}" = "GCC" ]]; then
+          if [[ "${{ matrix.generator }}" = "GCC" ]]; then
             echo "CC=gcc-10" >> "${GITHUB_ENV}"
             echo "CXX=g++-10" >> "${GITHUB_ENV}"
             echo "LD=ld" >> "${GITHUB_ENV}"
-          elif [[ "${{ matrix.compiler }}" = "Clang" ]]; then
+          elif [[ "${{ matrix.generator }}" = "Clang" ]]; then
             echo "CC=clang-14" >> "${GITHUB_ENV}"
             echo "CXX=clang++-14" >> "${GITHUB_ENV}"
             echo "LD=lld" >> "${GITHUB_ENV}"
@@ -170,7 +179,7 @@ jobs:
       uses: actions/cache@v3
       with:
         path: "${{ github.workspace }}/build/obs"
-        key: "${{ matrix.runner }}-${{ matrix.compiler }}-obs${{ env.obs_version }}-obsdeps${{ env.obs_deps_version }}-qt${{ matrix.qt }}-${{ env.CACHE_VERSION }}"
+        key: "${{ matrix.runner }}-${{ matrix.generator }}-obs${{ env.obs_version }}-obsdeps${{ env.obs_deps_version }}-qt${{ matrix.qt }}-${{ env.CACHE_VERSION }}"
     - name: "Dependency: OBS Libraries"
       id: obs
       if: ${{ steps.obs-cache.outputs.cache-hit != 'true' }}
@@ -222,10 +231,10 @@ jobs:
       uses: actions/cache@v3
       with:
         path: "${{ github.workspace }}/build/ci"
-        key: "${{ matrix.runner }}-${{ matrix.compiler }}-${{ github.ref_name }}-obs${{ env.obs_version }}-obsdeps${{ env.obs_deps_version }}-qt${{ matrix.qt }}-${{ env.CACHE_VERSION }}"
+        key: "${{ matrix.runner }}-${{ matrix.generator }}-${{ github.ref_name }}-obs${{ env.obs_version }}-obsdeps${{ env.obs_deps_version }}-qt${{ matrix.qt }}-${{ env.CACHE_VERSION }}"
         restore-keys: |
-          "${{ matrix.runner }}-${{ matrix.compiler }}-${{ github.ref_name }}-obs${{ env.obs_version }}-obsdeps${{ env.obs_deps_version }}-qt${{ matrix.qt }}-${{ env.CACHE_VERSION }}"
-          "${{ matrix.runner }}-${{ matrix.compiler }}-main-obs${{ env.obs_version }}-obsdeps${{ env.obs_deps_version }}-qt${{ matrix.qt }}-${{ env.CACHE_VERSION }}"
+          "${{ matrix.runner }}-${{ matrix.generator }}-${{ github.ref_name }}-obs${{ env.obs_version }}-obsdeps${{ env.obs_deps_version }}-qt${{ matrix.qt }}-${{ env.CACHE_VERSION }}"
+          "${{ matrix.runner }}-${{ matrix.generator }}-main-obs${{ env.obs_version }}-obsdeps${{ env.obs_deps_version }}-qt${{ matrix.qt }}-${{ env.CACHE_VERSION }}"
 
     - name: "Configure & Build (Debug)"
       continue-on-error: true
@@ -314,5 +323,5 @@ jobs:
     - name: "Artifacts"
       uses: actions/upload-artifact@v3
       with:
-        name: "${{ matrix.runner }}-${{ matrix.compiler }}-qt${{ matrix.qt }}"
+        name: "${{ matrix.runner }}-${{ matrix.generator }}-qt${{ matrix.qt }}"
         path: "${{ github.workspace }}/build/package"
