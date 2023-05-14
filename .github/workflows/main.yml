@@ -50,6 +50,13 @@ jobs:
         repository: Xaymar/obs-StreamFX
         submodules: recursive
         fetch-depth: 0
+
+    - name: "Install InnoSetup (Windows)"
+      if: startsWith( matrix.runner, 'windows' )
+      run: |
+        curl "-kL" "https://cdn.xaymar.com/ci/innosetup-6.2.1.exe" "-f" "--retry" "5" "-o" "inno.exe"
+        .\inno.exe /VERYSILENT /SP- /SUPPRESSMSGBOXES /NORESTART
+        
     - name: "Gather Information"
       id: info
       shell: bash
@@ -140,32 +147,36 @@ jobs:
           --install "${{ github.workspace }}/build/obs" \
           --config RelWithDebInfo \
           --component obs_libraries
-    - name: "Configure"
+
+
+    - name: "Configure & Build (Debug)"
       continue-on-error: true
       shell: bash
       run: |
         cmake \
           -S "${{ github.workspace }}" \
-          -B "${{ github.workspace }}/build/ci" \
+          -B "${{ github.workspace }}/build/debug" \
           -DCMAKE_SYSTEM_VERSION="${{ env.CMAKE_SYSTEM_VERSION }}" \
           -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON \
           -Dlibobs_DIR="${{ github.workspace }}/build/obs/install" \
           -DQt${{ matrix.qt }}_DIR="${{ github.workspace }}/build/qt" \
           -DFFmpeg_DIR="${{ github.workspace }}/build/obsdeps" \
           -DCURL_DIR="${{ github.workspace }}/build/obsdeps"
-    - name: "Build: Debug"
+
+    - name: "Configure & Build (Release)"
       continue-on-error: true
       shell: bash
-      env:
-        CMAKE_BUILD_TYPE: "Debug"
       run: |
-        cmake --build "build/debug" --config ${{ env.CMAKE_BUILD_TYPE }} --target StreamFX
-    - name: "Build: Release"
-      shell: bash
-      env:
-        CMAKE_BUILD_TYPE: "RelWithDebInfo"
-      run: |
-        cmake --build "build/release" --config ${{ env.CMAKE_BUILD_TYPE }} --target StreamFX
+        cmake \
+          -S "${{ github.workspace }}" \
+          -B "${{ github.workspace }}/build/release" \
+          -DCMAKE_SYSTEM_VERSION="${{ env.CMAKE_SYSTEM_VERSION }}" \
+          -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON \
+          -Dlibobs_DIR="${{ github.workspace }}/build/obs/install" \
+          -DQt${{ matrix.qt }}_DIR="${{ github.workspace }}/build/qt" \
+          -DFFmpeg_DIR="${{ github.workspace }}/build/obsdeps" \
+          -DCURL_DIR="${{ github.workspace }}/build/obsdeps"
+
 
     - name: "Packaging"
       shell: bash
