@@ -159,16 +159,29 @@ jobs:
       env:
         CMAKE_BUILD_TYPE: "Debug"
       run: |
-        cmake --build "build/ci" --config ${{ env.CMAKE_BUILD_TYPE }} --target StreamFX
+        cmake --build "build/debug" --config ${{ env.CMAKE_BUILD_TYPE }} --target StreamFX
     - name: "Build: Release"
       shell: bash
       env:
         CMAKE_BUILD_TYPE: "RelWithDebInfo"
       run: |
-        cmake --build "build/ci" --config ${{ env.CMAKE_BUILD_TYPE }} --target StreamFX
+        cmake --build "build/release" --config ${{ env.CMAKE_BUILD_TYPE }} --target StreamFX
+
+    - name: "Packaging"
+      shell: bash
+      run: |
+        mkdir "${{ github.workspace }}/build/package"
+        cmake --build "${{ github.workspace }}/build/debug" --config Debug --target PACKAGE_7Z
+        cmake --build "${{ github.workspace }}/build/release" --config RelWithDebInfo --target PACKAGE_7Z
+    - name: "Packaging (Windows)"
+      if: startsWith( matrix.runner, 'windows' )
+      shell: cmd
+      run: |
+        "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" /V10 ".\build\debug\installer.iss"
+        "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" /V10 ".\build\release\installer.iss"
 
     - name: "Artifacts"
       uses: actions/upload-artifact@v3
       with:
         name: "${{ matrix.runner }}-${{ matrix.generator }}-qt${{ matrix.qt }}"
-        path: "${{ github.workspace }}/build/ci"
+        path: "${{ github.workspace }}/build/package"
