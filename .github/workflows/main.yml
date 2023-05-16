@@ -167,7 +167,7 @@ jobs:
       env:
         CMAKE_BUILD_TYPE: "Debug"
       run: |
-        mkdir "${{ github.workspace }}/build/package"
+        mkdir "${{ github.workspace }}/build/packages"
         cmake --build ""${{ github.workspace }}/build/ci" --config ${{ env.CMAKE_BUILD_TYPE }} --target PACKAGE_7Z
         cmake --build ""${{ github.workspace }}/build/ci" --config ${{ env.CMAKE_BUILD_TYPE }} --target StreamFX
 
@@ -180,7 +180,7 @@ jobs:
       env:
         CMAKE_BUILD_TYPE: "RelWithDebInfo"
       run: |
-        mkdir "${{ github.workspace }}/build/package"
+        mkdir "${{ github.workspace }}/build/packages"
         cmake --build "${{ github.workspace }}build/ci" --config ${{ env.CMAKE_BUILD_TYPE }} --target PACKAGE_7Z
         cmake --build "${{ github.workspace }}build/ci" --config ${{ env.CMAKE_BUILD_TYPE }} --target StreamFX
 
@@ -201,4 +201,4 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: "${{ matrix.runner }}-${{ matrix.generator }}-qt${{ matrix.qt }}"
-        path: "${{ github.workspace }}/build/package"
+        path: "${{ github.workspace }}/build/packages"
