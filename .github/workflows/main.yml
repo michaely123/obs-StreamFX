@@ -184,9 +184,7 @@ jobs:
       shell: bash
       run: |
         mkdir "${{ github.workspace }}/build/package"
-        cmake --build "build/debug" --config Debug --target StreamFX
         cmake --build "build/debug" --config Debug --target PACKAGE_7Z
-        cmake --build "build/release" --config RelWithDebInfo --target StreamFX
         cmake --build "build/release" --config RelWithDebInfo --target PACKAGE_7Z
 
 
