@@ -161,33 +161,18 @@ jobs:
 
 
 
-    - name: "Build: Debug"
-      continue-on-error: true
+
+
+
+
+    - name: "Packaging"
       shell: bash
-      env:
-        CMAKE_BUILD_TYPE: "Debug"
       run: |
-        mkdir "${{ github.workspace }}/build/packages"
-        cmake --build ""${{ github.workspace }}/build/ci" --config ${{ env.CMAKE_BUILD_TYPE }} --target PACKAGE_7Z
-        cmake --build ""${{ github.workspace }}/build/ci" --config ${{ env.CMAKE_BUILD_TYPE }} --target StreamFX
-
-
-
-
-
-    - name: "Build: Release"
-      shell: bash
-      env:
-        CMAKE_BUILD_TYPE: "RelWithDebInfo"
-      run: |
-        mkdir "${{ github.workspace }}/build/packages"
-        cmake --build "${{ github.workspace }}build/ci" --config ${{ env.CMAKE_BUILD_TYPE }} --target PACKAGE_7Z
-        cmake --build "${{ github.workspace }}build/ci" --config ${{ env.CMAKE_BUILD_TYPE }} --target StreamFX
-
-
-
-
-
+        mkdir "${{ github.workspace }}/build/package"
+        cmake --build "${{ github.workspace }}/build/debug" --config Debug --target PACKAGE_7Z
+        cmake --build "build/ci" --config Debug --target StreamFX
+        cmake --build "${{ github.workspace }}/build/release" --config RelWithDebInfo --target PACKAGE_7Z
+        cmake --build "build/ci" --config RelWithDebInfo --target StreamFX
 
 
     - name: "Packaging (Windows)"
@@ -201,4 +186,4 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: "${{ matrix.runner }}-${{ matrix.generator }}-qt${{ matrix.qt }}"
-        path: "${{ github.workspace }}/build/packages"
+        path: "${{ github.workspace }}/build/package"
