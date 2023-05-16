@@ -147,6 +147,8 @@ jobs:
           --config RelWithDebInfo \
           --component obs_libraries
 
+
+
     - name: "Configure (Debug)"
       continue-on-error: true
       shell: bash
@@ -162,6 +164,7 @@ jobs:
           -DQt${{ matrix.qt }}_DIR="${{ github.workspace }}/build/qt" \
           -DFFmpeg_DIR="${{ github.workspace }}/build/obsdeps" \
           -DCURL_DIR="${{ github.workspace }}/build/obsdeps"
+        cmake --build "${{ github.workspace }}/build/debug" --config ${{ env.CMAKE_BUILD_TYPE }} --target install
  
 
     - name: "Configure (Release)"
@@ -179,7 +182,7 @@ jobs:
           -DQt${{ matrix.qt }}_DIR="${{ github.workspace }}/build/qt" \
           -DFFmpeg_DIR="${{ github.workspace }}/build/obsdeps" \
           -DCURL_DIR="${{ github.workspace }}/build/obsdeps"
-
+        cmake --build "${{ github.workspace }}/build/release" --config ${{ env.CMAKE_BUILD_TYPE }} --target install
 
 
  
