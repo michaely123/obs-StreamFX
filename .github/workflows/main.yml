@@ -145,13 +145,32 @@ jobs:
           --install "${{ github.workspace }}/build/obs" \
           --config RelWithDebInfo \
           --component obs_libraries
-    - name: "Configure"
+
+    - name: "Configure (Debug)"
       continue-on-error: true
       shell: bash
+      env:
+        CMAKE_BUILD_TYPE: "Debug"
       run: |
         cmake \
           -S "${{ github.workspace }}" \
-          -B "${{ github.workspace }}/build/ci" \
+          -B "${{ github.workspace }}/build/debug" \
+          -DCMAKE_SYSTEM_VERSION="${{ env.CMAKE_SYSTEM_VERSION }}" \
+          -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON \
+          -Dlibobs_DIR="${{ github.workspace }}/build/obs/install" \
+          -DQt${{ matrix.qt }}_DIR="${{ github.workspace }}/build/qt" \
+          -DFFmpeg_DIR="${{ github.workspace }}/build/obsdeps" \
+          -DCURL_DIR="${{ github.workspace }}/build/obsdeps"
+
+    - name: "Configure (Release)"
+      continue-on-error: true
+      shell: bash
+      env:
+        CMAKE_BUILD_TYPE: "RelWithDebInfo"
+      run: |
+        cmake \
+          -S "${{ github.workspace }}" \
+          -B "${{ github.workspace }}/build/release" \
           -DCMAKE_SYSTEM_VERSION="${{ env.CMAKE_SYSTEM_VERSION }}" \
           -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON \
           -Dlibobs_DIR="${{ github.workspace }}/build/obs/install" \
@@ -160,17 +179,15 @@ jobs:
           -DCURL_DIR="${{ github.workspace }}/build/obsdeps"
 
 
-
-
-
-
-
     - name: "Packaging"
+      continue-on-error: true
       shell: bash
       run: |
         mkdir "${{ github.workspace }}/build/package"
-        cmake --build "build/ci" --config Debug --target StreamFX
-        cmake --build "build/ci" --config RelWithDebInfo --target StreamFX
+        cmake --build "build/debug" --config Debug --target StreamFX
+        cmake --build "build/debug" --config Debug --target PACKAGE_7Z
+        cmake --build "build/release" --config RelWithDebInfo --target StreamFX
+        cmake --build "build/release" --config RelWithDebInfo --target PACKAGE_7Z
 
 
     - name: "Packaging (Windows)"
