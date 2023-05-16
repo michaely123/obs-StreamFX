@@ -26,6 +26,10 @@ jobs:
         compiler: [ "Clang" ]
         qt: [ 6 ]
         include:
+          #- compiler: "MSVC"
+            #CMAKE_SYSTEM_VERSION: "10.0.20348.0"
+            #CMAKE_GENERATOR: "Visual Studio 17 2022"
+            #CMAKE_GENERATOR_PLATFORM: "x64"
           - compiler: "Clang"
             CMAKE_SYSTEM_VERSION: "10.0.20348.0"
             CMAKE_GENERATOR: "Visual Studio 17 2022"
@@ -169,7 +173,7 @@ jobs:
       env:
         CMAKE_BUILD_TYPE: "RelWithDebInfo"
       run: |
-        mkdir "${{ github.workspace }}/build/package"
+        cd "${{ github.workspace }}/build/package"
         cmake --build "build/ci" --config ${{ env.CMAKE_BUILD_TYPE }} --target StreamFX
 
     - name: "Artifacts"
