@@ -167,14 +167,14 @@ jobs:
         CMAKE_BUILD_TYPE: "Debug"
       run: |
         mkdir "${{ github.workspace }}/build/package"
-        cmake --build "build/ci" --config ${{ env.CMAKE_BUILD_TYPE }} --target StreamFX
+        cmake --build "${{ github.workspace }}/build/ci" --config ${{ env.CMAKE_BUILD_TYPE }} --target StreamFX
     - name: "Build: Release"
       shell: bash
       env:
         CMAKE_BUILD_TYPE: "RelWithDebInfo"
       run: |
         cd "${{ github.workspace }}/build/package"
-        cmake --build "build/ci" --config ${{ env.CMAKE_BUILD_TYPE }} --target StreamFX
+        cmake --build "${{ github.workspace }}/build/ci" --config ${{ env.CMAKE_BUILD_TYPE }} --target StreamFX
 
     - name: "Artifacts"
       uses: actions/upload-artifact@v3
