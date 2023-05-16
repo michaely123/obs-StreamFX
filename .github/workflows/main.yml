@@ -1,10 +1,9 @@
 name: Build
-
+ 
 on:
   push:
     branches:
       - '*'
-
   pull_request:
     branches:
       - '*'
@@ -17,31 +16,38 @@ env:
   CACHE_VERSION: "2022-12-02"
 
 jobs:
-  windows:
+  build:
     strategy:
       fail-fast: false
       matrix:
-        runner: [ "windows-2022" ]
-        name: [ "Windows" ]
-        compiler: [ "Clang" ]
+        runner: [ "windows-2022"]
         qt: [ 6 ]
+        generator: [ "MSVC", "GCC", "Clang" ]
+        exclude:
+          - runner: windows-2022
+            generator: GCC
+          - runner: windows-2022
+            generator: Clang
+          - runner: windows-2022
+            qt: 5
         include:
-          #- compiler: "MSVC"
-            #CMAKE_SYSTEM_VERSION: "10.0.20348.0"
-            #CMAKE_GENERATOR: "Visual Studio 17 2022"
-            #CMAKE_GENERATOR_PLATFORM: "x64"
-          - compiler: "Clang"
+          # Windows supports MSVC
+          - runner: windows-2022
+            name: "Windows"
+            package_name: "windows"
             CMAKE_SYSTEM_VERSION: "10.0.20348.0"
             CMAKE_GENERATOR: "Visual Studio 17 2022"
-            CMAKE_GENERATOR_TOOLSET: "ClangCL"
             CMAKE_GENERATOR_PLATFORM: "x64"
+
     runs-on: "${{ matrix.runner }}"
-    name: "${{ matrix.name }} (${{ matrix.compiler }})"
+    name: "${{ matrix.name }} (${{ matrix.generator }}, Qt${{ matrix.qt }})"
     env:
       CMAKE_GENERATOR: "${{ matrix.CMAKE_GENERATOR }}"
       CMAKE_GENERATOR_PLATFORM: "${{ matrix.CMAKE_GENERATOR_PLATFORM }}"
       CMAKE_GENERATOR_TOOLSET: "${{ matrix.CMAKE_GENERATOR_TOOLSET }}"
       CMAKE_SYSTEM_VERSION: "${{ matrix.CMAKE_SYSTEM_VERSION }}"
+      CMAKE_OSX_DEPLOYMENT_TARGET: "${{ matrix.CMAKE_OSX_DEPLOYMENT_TARGET }}"
+      CMAKE_OSX_ARCHITECTURES: "${{ matrix.CMAKE_OSX_ARCHITECTURES }}"
     steps:
     - name: "Clone"
       uses: actions/checkout@v3
@@ -50,104 +56,184 @@ jobs:
         submodules: recursive
         fetch-depth: 0
 
+    - name: "Install LLVM/Clang (Windows)"
+      if: startsWith( matrix.runner, 'windows' )
+      run: |
+        curl "-kL" "https://github.com/llvm/llvm-project/releases/download/llvmorg-14.0.4/LLVM-14.0.4-win64.exe" "-f" "--retry" "5" "-o" "llvm.exe"
+        7z x -y -o"C:\Program Files\LLVM" llvm.exe "bin" "include" "lib" "libexec" "share" "Uninstall.exe"
+        echo "CLANG_PATH=\"C:\\Program Files\\LLVM\\bin\"" >> "${GITHUB_ENV}"
+        
     - name: "Install InnoSetup (Windows)"
       if: startsWith( matrix.runner, 'windows' )
       run: |
         curl "-kL" "https://cdn.xaymar.com/ci/innosetup-6.2.1.exe" "-f" "--retry" "5" "-o" "inno.exe"
         .\inno.exe /VERYSILENT /SP- /SUPPRESSMSGBOXES /NORESTART
 
-    - name: "Gather Information"
+    - name: "Setup Build Tools and Gather Information"
       id: info
       shell: bash
       run: |
-        # Define buildspec file
-        buildspec="${{ github.workspace }}/third-party/obs-studio/buildspec.json"
+        # Dependency Versioning
+        if [[ "${{ matrix.runner }}" = windows* ]]; then
+          if [[ -f "${{ github.workspace }}/third-party/DEPS_VERSION_WIN" ]]; then
+            echo "obs_deps_version=$(cat "${{ github.workspace }}/third-party/DEPS_VERSION_WIN")" >> $GITHUB_ENV
+          else
+            [[ $(cat "${{ github.workspace }}/third-party/obs-studio/.github/workflows/main.yml") =~ DEPS_VERSION_WIN:\ \'([0-9a-zA-Z\-]+)\' ]]
+            echo "obs_deps_version=${BASH_REMATCH[1]}" >> $GITHUB_ENV
+          fi
+        elif [[ "${{ matrix.runner }}" = macos* ]]; then
+          if [[ -f "${{ github.workspace }}/third-party/DEPS_VERSION_MAC" ]]; then
+            echo "obs_deps_version=$(cat "${{ github.workspace }}/third-party/DEPS_VERSION_MAC")" >> $GITHUB_ENV
+          else
+            [[ $(cat "${{ github.workspace }}/third-party/obs-studio/.github/workflows/main.yml") =~ DEPS_VERSION_MAC:\ \'([0-9a-zA-Z\-]+)\' ]]
+            echo "obs_deps_version=${BASH_REMATCH[1]}" >> $GITHUB_ENV
+          fi
+        else
+          echo "obs_deps_version=BADVALUE" >> $GITHUB_ENV
+        fi
+        echo "obs_version::$(cd "${{ github.workspace }}/third-party/obs-studio" && git describe --tags --long)"
 
-        # Prebuilt Dependencies Version
-        IFS=$'\n' buildspecdata=($(node tools/buildspec.js "${buildspec}" "prebuilt" "windows-x64"))
-        echo "obs_deps_version=${buildspecdata[0]}" >> "$GITHUB_ENV"
-        echo "obs_deps_hash=${buildspecdata[1]}" >> "$GITHUB_ENV"
-        echo "obs_deps_url=${buildspecdata[2]}" >> "$GITHUB_ENV"
+        # CMake Flags
+        if [[ "${{ matrix.CMAKE_GENERATOR }}" != "" ]]; then
+          echo "cmake_generator=-G \"${{ matrix.CMAKE_GENERATOR }}\"" >> $GITHUB_ENV
+        fi
+        if [[ "${{ matrix.CMAKE_GENERATOR_TOOLSET }}" != "" ]]; then
+          echo "cmake_generator_toolset=-T \"${{ matrix.CMAKE_GENERATOR_TOOLSET }}\"" >> $GITHUB_ENV
+        fi
+        if [[ "${{ matrix.CMAKE_GENERATOR_PLATFORM }}" != "" ]]; then
+          echo "cmake_generator_platform=-A \"${{ matrix.CMAKE_GENERATOR_PLATFORM }}\"" >> $GITHUB_ENV
+        fi
 
-        # Qt Version
-        IFS=$'\n' buildspecdata=($(node tools/buildspec.js "${buildspec}" "qt${{ matrix.qt }}" "windows-x64"))
-        echo "qt_version=${buildspecdata[0]}" >> "$GITHUB_ENV"
-        echo "qt_hash=${buildspecdata[1]}" >> "$GITHUB_ENV"
-        echo "qt_url=${buildspecdata[2]}" >> "$GITHUB_ENV"
+        # Compiler Setup
+        if [[ "${{ matrix.runner }}" = ubuntu* ]]; then
+          if [[ "${{ matrix.generator }}" = "GCC" ]]; then
+            echo "CC=gcc-10" >> "${GITHUB_ENV}"
+            echo "CXX=g++-10" >> "${GITHUB_ENV}"
+            echo "LD=ld" >> "${GITHUB_ENV}"
+          elif [[ "${{ matrix.generator }}" = "Clang" ]]; then
+            echo "CC=clang-14" >> "${GITHUB_ENV}"
+            echo "CXX=clang++-14" >> "${GITHUB_ENV}"
+            echo "LD=lld" >> "${GITHUB_ENV}"
+          fi
+        fi
 
-        # libOBS Version
-        echo "obs_version=$(cd "${{ github.workspace }}/third-party/obs-studio" && git describe --tags --long)" >> "$GITHUB_ENV"
     - name: "Dependency: Qt (Cache)"
       id: qt-cache
+      if: ${{ ! startsWith( matrix.runner, 'ubuntu' ) }}
       uses: actions/cache@v3
       with:
         path: "${{ github.workspace }}/build/qt"
-        key: "qt${{ env.qt_hash }}-${{ env.CACHE_VERSION }}"
-    - name: "Dependency: Qt"
+        key: "${{ matrix.runner }}-obsdeps${{ env.obs_deps_version }}-qt${{ matrix.qt }}-${{ env.CACHE_VERSION }}"
+    - name: "Dependency: Qt "
       id: qt
-      if: ${{ steps.qt-cache.outputs.cache-hit != 'true' }}
+      if: ${{ startsWith( matrix.runner, 'ubuntu' ) || (steps.qt-cache.outputs.cache-hit != 'true') }}
       shell: bash
       run: |
-        curl --retry 5 --retry-delay 30 -jLo /tmp/qt.zip "${{ env.qt_url }}"
-        if [[ ! -f "${{ github.workspace }}/build/qt" ]]; then mkdir -p "${{ github.workspace }}/build/qt"; fi
-        7z x -y -o"${{ github.workspace }}/build/qt" -- "/tmp/qt.zip"
-    - name: "Dependency: Prebuilt OBS Studio Dependencies (Cache)"
+        if [[ "${{ matrix.runner }}" = windows* ]]; then
+          curl --retry 5 --retry-delay 30 -jLo /tmp/qt.zip "https://github.com/obsproject/obs-deps/releases/download/${{ env.obs_deps_version }}/windows-deps-qt${{ matrix.qt }}-${{ env.obs_deps_version }}-x64.zip"
+          if [[ ! -f "${{ github.workspace }}/build/qt" ]]; then mkdir -p "${{ github.workspace }}/build/qt"; fi
+          7z x -y -o"${{ github.workspace }}/build/qt" -- "/tmp/qt.zip"
+        elif [[ "${{ matrix.runner }}" = macos* ]]; then
+          curl --retry 5 --retry-delay 30 -jLo /tmp/qt.tar.xz "https://github.com/obsproject/obs-deps/releases/download/${{ env.obs_deps_version }}/macos-deps-qt${{ matrix.qt }}-${{ env.obs_deps_version }}-universal.tar.xz"
+          if [[ ! -f "${{ github.workspace }}/build/qt" ]]; then mkdir -p "${{ github.workspace }}/build/qt"; fi
+          tar -xvf "/tmp/qt.tar.xz" -C "${{ github.workspace }}/build/qt"
+        elif [[ "${{ matrix.runner }}" = ubuntu* ]]; then
+          if [[ ${{ matrix.qt }} -eq 5 ]]; then
+            sudo apt-get -y install -V \
+              qtbase5-dev qtbase5-private-dev libqt5svg5-dev
+          elif [[ ${{ matrix.qt }} -eq 6 ]]; then
+            sudo apt-get -y install -V \
+              qt6-base-dev qt6-base-private-dev libqt6svg6-dev libgles2-mesa-dev libegl1-mesa-dev libgl1-mesa-dev
+          fi
+        fi
+
+    - name: "Dependency: OBS Dependencies (FFmpeg, CURL, ...) (Cache)"
       id: obsdeps-cache
+      if: ${{ ! startsWith( matrix.runner, 'ubuntu' ) }}
       uses: actions/cache@v3
       with:
         path: "${{ github.workspace }}/build/obsdeps"
-        key: "obsdeps${{ env.obs_deps_hash }}-${{ env.CACHE_VERSION }}"
-    - name: "Dependency: Prebuilt OBS Studio Dependencies"
+        key: "${{ matrix.runner }}-obsdeps${{ env.obs_deps_version }}-${{ env.CACHE_VERSION }}"
+    - name: "Dependency: OBS Dependencies (FFmpeg, CURL, ...)"
       id: obsdeps
-      if: ${{ steps.obsdeps-cache.outputs.cache-hit != 'true' }}
+      if: ${{ startsWith( matrix.runner, 'ubuntu' ) || (steps.obsdeps-cache.outputs.cache-hit != 'true') }}
       shell: bash
       run: |
-        curl --retry 5 --retry-delay 30 -jLo /tmp/obsdeps.zip "${{ env.obs_deps_url }}"
-        if [[ ! -f "${{ github.workspace }}/build/obsdeps" ]]; then mkdir -p "${{ github.workspace }}/build/obsdeps"; fi
-        7z x -y -o"${{ github.workspace }}/build/obsdeps" -- "/tmp/obsdeps.zip"
+        if [[ "${{ matrix.runner }}" = windows* ]]; then
+          curl --retry 5 --retry-delay 30 -jLo /tmp/obsdeps.zip "https://github.com/obsproject/obs-deps/releases/download/${{ env.obs_deps_version }}/windows-deps-${{ env.obs_deps_version }}-x64.zip"
+          if [[ ! -f "${{ github.workspace }}/build/obsdeps" ]]; then mkdir -p "${{ github.workspace }}/build/obsdeps"; fi
+          7z x -y -o"${{ github.workspace }}/build/obsdeps" -- "/tmp/obsdeps.zip"
+        elif [[ "${{ matrix.runner }}" = macos* ]]; then
+          curl --retry 5 --retry-delay 30 -jLo /tmp/obsdeps.tar.xz "https://github.com/obsproject/obs-deps/releases/download/${{ env.obs_deps_version }}/macos-deps-${{ env.obs_deps_version }}-universal.tar.xz"
+          if [[ ! -f "${{ github.workspace }}/build/obsdeps" ]]; then mkdir -p "${{ github.workspace }}/build/obsdeps"; fi
+          tar -xvf "/tmp/obsdeps.tar.xz" -C "${{ github.workspace }}/build/obsdeps"
+        elif [[ "${{ matrix.runner }}" = ubuntu* ]]; then
+          sudo apt-get -y install -V \
+            libavcodec-dev libavdevice-dev libavfilter-dev libavformat-dev libavutil-dev libswresample-dev libswscale-dev \
+            libcurl4-openssl-dev
+        fi
+
     - name: "Dependency: OBS Libraries (Cache)"
       id: obs-cache
       uses: actions/cache@v3
       with:
         path: "${{ github.workspace }}/build/obs"
-        key: "obs${{ env.obs_version }}-${{ matrix.runner }}_${{ matrix.compiler }}-obsdeps${{ env.obs_deps_hash }}-qt${{ env.qt_hash }}-${{ env.CACHE_VERSION }}"
+        key: "${{ matrix.runner }}-${{ matrix.generator }}-obs${{ env.obs_version }}-obsdeps${{ env.obs_deps_version }}-qt${{ matrix.qt }}-${{ env.CACHE_VERSION }}"
     - name: "Dependency: OBS Libraries"
       id: obs
       if: ${{ steps.obs-cache.outputs.cache-hit != 'true' }}
-      env:
-        # obs-studio does not support ClangCL
-        CMAKE_GENERATOR_TOOLSET: ""
       shell: bash
+      env:
+        CMAKE_BUILD_TYPE: "Release"
       run: |
-        # Apply patches to obs-studio
-        pushd "${{ github.workspace }}/third-party/obs-studio" > /dev/null
-        for f in ../../patches/obs-studio/*.patch; do
-          echo "Applying patch '${f}''..."
-          [ -e "$f" ] || continue
-          git apply "$f"
-        done
-        popd > /dev/null
-
-        # Build obs-studio
+        # Extra requirements by libobs on Linux.
+        if [[ "${{ matrix.runner }}" = ubuntu* ]]; then
+          sudo apt-get install \
+            libavcodec-dev libavdevice-dev libavfilter-dev libavformat-dev libavutil-dev libswresample-dev libswscale-dev \
+            libx264-dev libcurl4-openssl-dev libmbedtls-dev libgl1-mesa-dev libjansson-dev libluajit-5.1-dev python3-dev \
+            libx11-dev libxcb-randr0-dev libxcb-shm0-dev libxcb-xinerama0-dev libxcomposite-dev libxinerama-dev \
+            libxcb1-dev libx11-xcb-dev libxcb-xfixes0-dev swig libcmocka-dev libxss-dev libglvnd-dev libgles2-mesa \
+            libgles2-mesa-dev libwayland-dev \
+            libasound2-dev libfdk-aac-dev libfontconfig-dev libfreetype6-dev libjack-jackd2-dev libpulse-dev \
+            libsndio-dev libspeexdsp-dev libudev-dev libv4l-dev libva-dev libvlc-dev libdrm-dev
+        fi
         cmake \
           -S "${{ github.workspace }}/third-party/obs-studio" \
           -B "${{ github.workspace }}/build/obs" \
-          -DCMAKE_SYSTEM_VERSION="${{ env.CMAKE_SYSTEM_VERSION }}" \
+          ${{ env.cmake_generator }} \
+          ${{ env.cmake_generator_toolset }} \
+          ${{ env.cmake_generator_platform }} \
+          -DCMAKE_C_COMPILER="${{ env.CC }}" \
+          -DCMAKE_CXX_COMPILER="${{ env.CXX }}" \
+          -DCMAKE_LINKER="${{ env.LD }}" \
+          -DCMAKE_OSX_ARCHITECTURES="${{ matrix.CMAKE_OSX_ARCHITECTURES }}" \
+          -DCMAKE_OSX_DEPLOYMENT_TARGET="${{ matrix.CMAKE_OSX_DEPLOYMENT_TARGET }}" \
+          -DCMAKE_SYSTEM_VERSION="${{ matrix.CMAKE_SYSTEM_VERSION }}" \
+          -DCMAKE_BUILD_TYPE="${{ env.CMAKE_BUILD_TYPE }}" \
           -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/build/obs/install" \
-          -DCMAKE_PREFIX_PATH="${{ github.workspace }}/build/obsdeps;${{ github.workspace }}/build/qt" \
           -DENABLE_PLUGINS=OFF \
           -DENABLE_UI=OFF \
-          -DENABLE_SCRIPTING=OFF
+          -DENABLE_SCRIPTING=OFF \
+          -DCMAKE_PREFIX_PATH="${{ github.workspace }}/build/obsdeps;${{ github.workspace }}/build/qt"
         cmake \
           --build "${{ github.workspace }}/build/obs" \
-          --config RelWithDebInfo \
+          --config Release \
           --target obs-frontend-api
         cmake \
           --install "${{ github.workspace }}/build/obs" \
-          --config RelWithDebInfo \
+          --config Release \
           --component obs_libraries
 
-
+    - name: "Configure (Cache)"
+      if: ${{ ! startsWith( github.ref, 'refs/tags/' ) }}
+      id: streamfx-cache
+      uses: actions/cache@v3
+      with:
+        path: "${{ github.workspace }}/build/ci"
+        key: "${{ matrix.runner }}-${{ matrix.generator }}-${{ github.ref_name }}-obs${{ env.obs_version }}-obsdeps${{ env.obs_deps_version }}-qt${{ matrix.qt }}-${{ env.CACHE_VERSION }}"
+        restore-keys: |
+          "${{ matrix.runner }}-${{ matrix.generator }}-${{ github.ref_name }}-obs${{ env.obs_version }}-obsdeps${{ env.obs_deps_version }}-qt${{ matrix.qt }}-${{ env.CACHE_VERSION }}"
+          "${{ matrix.runner }}-${{ matrix.generator }}-main-obs${{ env.obs_version }}-obsdeps${{ env.obs_deps_version }}-qt${{ matrix.qt }}-${{ env.CACHE_VERSION }}"
 
     - name: "Configure & Build: Debug"
       continue-on-error: true
@@ -161,16 +247,15 @@ jobs:
           ${{ env.cmake_generator }} \
           ${{ env.cmake_generator_toolset }} \
           ${{ env.cmake_generator_platform }} \
-          -DCMAKE_C_COMPILER="${{ env.CMAKE_C_COMPILER }}" \
-          -DCMAKE_CXX_COMPILER="${{ env.CMAKE_CXX_COMPILER }}" \
+          -DCMAKE_C_COMPILER="${{ env.CC }}" \
+          -DCMAKE_CXX_COMPILER="${{ env.CXX }}" \
           -DCMAKE_LINKER="${{ env.LD }}" \
           -DCMAKE_OSX_ARCHITECTURES="${{ matrix.CMAKE_OSX_ARCHITECTURES }}" \
           -DCMAKE_OSX_DEPLOYMENT_TARGET="${{ matrix.CMAKE_OSX_DEPLOYMENT_TARGET }}" \
           -DCMAKE_SYSTEM_VERSION="${{ matrix.CMAKE_SYSTEM_VERSION }}" \
           -DCMAKE_BUILD_TYPE="${{ env.CMAKE_BUILD_TYPE }}" \
-          -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON \
           -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/build/debug/install" \
-          -DPACKAGE_NAME="streamfx-${{ env.PACKAGE_NAME }}-debug" \
+          -DPACKAGE_NAME="streamfx-${{ matrix.package_name }}-debug" \
           -DPACKAGE_PREFIX="${{ github.workspace }}/build/package" \
           -DENABLE_CLANG=TRUE -DCLANG_PATH="${{ env.CLANG_PATH }}" \
           -DENABLE_PROFILING=ON \
@@ -178,10 +263,15 @@ jobs:
           -DQt_DIR="${{ github.workspace }}/build/qt" \
           -DFFmpeg_DIR="${{ github.workspace }}/build/obsdeps" \
           -DCURL_DIR="${{ github.workspace }}/build/obsdeps"
-        cmake --build "build/debug" --config ${{ env.CMAKE_BUILD_TYPE }} --target install
+        if [[ "${{ matrix.runner }}" = windows* ]]; then
+          cmake --build "build/debug" --config ${{ env.CMAKE_BUILD_TYPE }} --target install
+        elif [[ "${{ matrix.runner }}" = ubuntu* ]]; then
+          cmake --build "build/debug" --config ${{ env.CMAKE_BUILD_TYPE }} --target install
+        elif [[ "${{ matrix.runner }}" = macos* ]]; then
+          cmake --build "build/debug" --config ${{ env.CMAKE_BUILD_TYPE }} --target install
+        fi
 
     - name: "Configure & Build: Release"
-      continue-on-error: true
       shell: bash
       env:
         CMAKE_BUILD_TYPE: "RelWithDebInfo"
@@ -192,16 +282,15 @@ jobs:
           ${{ env.cmake_generator }} \
           ${{ env.cmake_generator_toolset }} \
           ${{ env.cmake_generator_platform }} \
-          -DCMAKE_C_COMPILER="${{ env.CMAKE_C_COMPILER }}" \
-          -DCMAKE_CXX_COMPILER="${{ env.CMAKE_CXX_COMPILER }}" \
+          -DCMAKE_C_COMPILER="${{ env.CC }}" \
+          -DCMAKE_CXX_COMPILER="${{ env.CXX }}" \
           -DCMAKE_LINKER="${{ env.LD }}" \
           -DCMAKE_OSX_ARCHITECTURES="${{ matrix.CMAKE_OSX_ARCHITECTURES }}" \
           -DCMAKE_OSX_DEPLOYMENT_TARGET="${{ matrix.CMAKE_OSX_DEPLOYMENT_TARGET }}" \
           -DCMAKE_SYSTEM_VERSION="${{ matrix.CMAKE_SYSTEM_VERSION }}" \
           -DCMAKE_BUILD_TYPE="${{ env.CMAKE_BUILD_TYPE }}" \
-          -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON \
           -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/build/release/install" \
-          -DPACKAGE_NAME="streamfx-${{ env.PACKAGE_NAME }}" \
+          -DPACKAGE_NAME="streamfx-${{ matrix.package_name }}" \
           -DPACKAGE_PREFIX="${{ github.workspace }}/build/package" \
           -DENABLE_CLANG=TRUE -DCLANG_PATH="${{ env.CLANG_PATH }}" \
           -DENABLE_PROFILING=OFF \
@@ -209,28 +298,20 @@ jobs:
           -DQt_DIR="${{ github.workspace}}/build/qt" \
           -DFFmpeg_DIR="${{ github.workspace }}/build/obsdeps" \
           -DCURL_DIR="${{ github.workspace }}/build/obsdeps"
-        cmake --build "build/release" --config ${{ env.CMAKE_BUILD_TYPE }} --target install
- 
- 
- 
-    - name: "Build: Debug"
-      continue-on-error: true
+        if [[ "${{ matrix.runner }}" = windows* ]]; then
+          cmake --build "build/release" --config ${{ env.CMAKE_BUILD_TYPE }} --target install
+        elif [[ "${{ matrix.runner }}" = ubuntu* ]]; then
+          cmake --build "build/release" --config ${{ env.CMAKE_BUILD_TYPE }} --target install/strip
+        elif [[ "${{ matrix.runner }}" = macos* ]]; then
+          cmake --build "build/release" --config ${{ env.CMAKE_BUILD_TYPE }} --target install
+        fi
+
+    - name: "Packaging"
       shell: bash
-      env:
-        CMAKE_BUILD_TYPE: "Debug"
       run: |
         mkdir "${{ github.workspace }}/build/package"
         cmake --build "${{ github.workspace }}/build/debug" --config Debug --target PACKAGE_7Z
-
-    - name: "Build: Release"
-      shell: bash
-      env:
-        CMAKE_BUILD_TYPE: "RelWithDebInfo"
-      run: |
-        cd "${{ github.workspace }}/build/package"
         cmake --build "${{ github.workspace }}/build/release" --config RelWithDebInfo --target PACKAGE_7Z
-
-
     - name: "Packaging (Windows)"
       if: startsWith( matrix.runner, 'windows' )
       shell: cmd
@@ -238,11 +319,8 @@ jobs:
         "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" /V10 ".\build\debug\installer.iss"
         "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" /V10 ".\build\release\installer.iss"
 
-
-
-
     - name: "Artifacts"
       uses: actions/upload-artifact@v3
       with:
-        name: "${{ matrix.runner }}-${{ matrix.compiler }}-qt${{ matrix.qt }}"
+        name: "${{ matrix.runner }}-${{ matrix.generator }}-qt${{ matrix.qt }}"
         path: "${{ github.workspace }}/build/package"
