@@ -169,9 +169,9 @@ jobs:
       shell: bash
       run: |
         mkdir "${{ github.workspace }}/build/package"
-        cmake --build "${{ github.workspace }}/build/debug" --config Debug --target PACKAGE_7Z
+        cmake --build "${{ github.workspace }}/build/ci" --config Debug --target PACKAGE_7Z
         cmake --build "build/ci" --config Debug --target StreamFX
-        cmake --build "${{ github.workspace }}/build/release" --config RelWithDebInfo --target PACKAGE_7Z
+        cmake --build "${{ github.workspace }}/build/ci" --config RelWithDebInfo --target PACKAGE_7Z
         cmake --build "build/ci" --config RelWithDebInfo --target StreamFX
 
 
