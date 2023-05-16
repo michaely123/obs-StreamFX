@@ -149,7 +149,7 @@ jobs:
 
 
 
-    - name: "Configure (Debug)"
+    - name: "Configure & Build: Debug"
       continue-on-error: true
       shell: bash
       env:
@@ -158,16 +158,29 @@ jobs:
         cmake \
           -S "${{ github.workspace }}" \
           -B "${{ github.workspace }}/build/debug" \
-          -DCMAKE_SYSTEM_VERSION="${{ env.CMAKE_SYSTEM_VERSION }}" \
+          ${{ env.cmake_generator }} \
+          ${{ env.cmake_generator_toolset }} \
+          ${{ env.cmake_generator_platform }} \
+          -DCMAKE_C_COMPILER="${{ env.CMAKE_C_COMPILER }}" \
+          -DCMAKE_CXX_COMPILER="${{ env.CMAKE_CXX_COMPILER }}" \
+          -DCMAKE_LINKER="${{ env.LD }}" \
+          -DCMAKE_OSX_ARCHITECTURES="${{ matrix.CMAKE_OSX_ARCHITECTURES }}" \
+          -DCMAKE_OSX_DEPLOYMENT_TARGET="${{ matrix.CMAKE_OSX_DEPLOYMENT_TARGET }}" \
+          -DCMAKE_SYSTEM_VERSION="${{ matrix.CMAKE_SYSTEM_VERSION }}" \
+          -DCMAKE_BUILD_TYPE="${{ env.CMAKE_BUILD_TYPE }}" \
           -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON \
+          -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/build/debug/install" \
+          -DPACKAGE_NAME="streamfx-${{ env.PACKAGE_NAME }}-debug" \
+          -DPACKAGE_PREFIX="${{ github.workspace }}/build/package" \
+          -DENABLE_CLANG=TRUE -DCLANG_PATH="${{ env.CLANG_PATH }}" \
+          -DENABLE_PROFILING=ON \
           -Dlibobs_DIR="${{ github.workspace }}/build/obs/install" \
-          -DQt${{ matrix.qt }}_DIR="${{ github.workspace }}/build/qt" \
+          -DQt_DIR="${{ github.workspace }}/build/qt" \
           -DFFmpeg_DIR="${{ github.workspace }}/build/obsdeps" \
           -DCURL_DIR="${{ github.workspace }}/build/obsdeps"
-        cmake --build "${{ github.workspace }}/build/debug" --config ${{ env.CMAKE_BUILD_TYPE }} --target install
- 
+        cmake --build "build/debug" --config ${{ env.CMAKE_BUILD_TYPE }} --target install
 
-    - name: "Configure (Release)"
+    - name: "Configure & Build: Release"
       continue-on-error: true
       shell: bash
       env:
@@ -176,15 +189,27 @@ jobs:
         cmake \
           -S "${{ github.workspace }}" \
           -B "${{ github.workspace }}/build/release" \
-          -DCMAKE_SYSTEM_VERSION="${{ env.CMAKE_SYSTEM_VERSION }}" \
+          ${{ env.cmake_generator }} \
+          ${{ env.cmake_generator_toolset }} \
+          ${{ env.cmake_generator_platform }} \
+          -DCMAKE_C_COMPILER="${{ env.CMAKE_C_COMPILER }}" \
+          -DCMAKE_CXX_COMPILER="${{ env.CMAKE_CXX_COMPILER }}" \
+          -DCMAKE_LINKER="${{ env.LD }}" \
+          -DCMAKE_OSX_ARCHITECTURES="${{ matrix.CMAKE_OSX_ARCHITECTURES }}" \
+          -DCMAKE_OSX_DEPLOYMENT_TARGET="${{ matrix.CMAKE_OSX_DEPLOYMENT_TARGET }}" \
+          -DCMAKE_SYSTEM_VERSION="${{ matrix.CMAKE_SYSTEM_VERSION }}" \
+          -DCMAKE_BUILD_TYPE="${{ env.CMAKE_BUILD_TYPE }}" \
           -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON \
+          -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/build/release/install" \
+          -DPACKAGE_NAME="streamfx-${{ env.PACKAGE_NAME }}" \
+          -DPACKAGE_PREFIX="${{ github.workspace }}/build/package" \
+          -DENABLE_CLANG=TRUE -DCLANG_PATH="${{ env.CLANG_PATH }}" \
+          -DENABLE_PROFILING=OFF \
           -Dlibobs_DIR="${{ github.workspace }}/build/obs/install" \
-          -DQt${{ matrix.qt }}_DIR="${{ github.workspace }}/build/qt" \
+          -DQt_DIR="${{ github.workspace}}/build/qt" \
           -DFFmpeg_DIR="${{ github.workspace }}/build/obsdeps" \
           -DCURL_DIR="${{ github.workspace }}/build/obsdeps"
-        cmake --build "${{ github.workspace }}/build/release" --config ${{ env.CMAKE_BUILD_TYPE }} --target install
-
-
+        cmake --build "build/release" --config ${{ env.CMAKE_BUILD_TYPE }} --target install
  
  
  
@@ -195,21 +220,23 @@ jobs:
         CMAKE_BUILD_TYPE: "Debug"
       run: |
         mkdir "${{ github.workspace }}/build/package"
-        cmake --build "${{ github.workspace }}/build/debug" --config ${{ env.CMAKE_BUILD_TYPE }} --target PACKAGE_7Z
+        cmake --build "${{ github.workspace }}/build/debug" --config Debug --target PACKAGE_7Z
+
     - name: "Build: Release"
       shell: bash
       env:
         CMAKE_BUILD_TYPE: "RelWithDebInfo"
       run: |
         cd "${{ github.workspace }}/build/package"
-        cmake --build "${{ github.workspace }}/build/release" --config ${{ env.CMAKE_BUILD_TYPE }} --target PACKAGE_7Z
+        cmake --build "${{ github.workspace }}/build/release" --config RelWithDebInfo --target PACKAGE_7Z
+
 
     - name: "Packaging (Windows)"
       if: startsWith( matrix.runner, 'windows' )
       shell: cmd
       run: |
-        "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" /V10 "${{ github.workspace }}\build\debug\installer.iss"
-        "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" /V10 "${{ github.workspace }}\build\release\installer.iss"
+        "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" /V10 ".\build\debug\installer.iss"
+        "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" /V10 ".\build\release\installer.iss"
 
 
 
