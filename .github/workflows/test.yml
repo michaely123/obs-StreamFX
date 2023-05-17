@@ -10,7 +10,7 @@ on:
 
 concurrency:
   group: build-${{ github.ref_name }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 env:
   CACHE_VERSION: "2022-12-02"
@@ -145,6 +145,82 @@ jobs:
           --install "${{ github.workspace }}/build/obs" \
           --config RelWithDebInfo \
           --component obs_libraries
+
+    - name: "Configure"
+      continue-on-error: true
+      shell: bash
+      run: |
+        cmake \
+          -S "${{ github.workspace }}" \
+          -B "${{ github.workspace }}/build/ci" \
+          -DCMAKE_SYSTEM_VERSION="${{ env.CMAKE_SYSTEM_VERSION }}" \
+          -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON \
+          -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/build/ci/install" \
+          -DPACKAGE_NAME="streamfx-${{ matrix.package_name }}" \
+          -DPACKAGE_PREFIX="${{ github.workspace }}/build/package" \
+          -Dlibobs_DIR="${{ github.workspace }}/build/obs/install" \
+          -DQt${{ matrix.qt }}_DIR="${{ github.workspace }}/build/qt" \
+          -DFFmpeg_DIR="${{ github.workspace }}/build/obsdeps" \
+          -DCURL_DIR="${{ github.workspace }}/build/obsdeps"
+    - name: "Build: Debug"
+      continue-on-error: true
+      shell: bash
+      env:
+        CMAKE_BUILD_TYPE: "Debug"
+      run: |
+        cmake --build "build/ci" --config ${{ env.CMAKE_BUILD_TYPE }} --target PACKAGE_7Z
+    - name: "Build: Release"
+      shell: bash
+      env:
+        CMAKE_BUILD_TYPE: "RelWithDebInfo"
+      run: |
+        cmake --build "build/ci" --config ${{ env.CMAKE_BUILD_TYPE }} --target install
+        cmake --build "build/ci" --config ${{ env.CMAKE_BUILD_TYPE }} --target StreamFX
+    
+    - name: "Packaging"
+      shell: cmd
+      run: |
+        "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" /V10 ".\build\ci\installer.iss"
+    - name: "Artifacts"
+      uses: actions/upload-artifact@v1
+      with:
+        name: "${{ matrix.runner }}-${{ matrix.compiler }}-qt${{ matrix.qt }}"
+        path: "${{ github.workspace }}/build/package"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
     - name: "Configure & Build: Debug"
