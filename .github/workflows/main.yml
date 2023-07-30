@@ -55,7 +55,7 @@ jobs:
         repository: Xaymar/obs-StreamFX
         submodules: recursive
         fetch-depth: 0
-        ref: 'patch/warnings-as-errors'
+        ref: ${{ github.ref }}
 
     - name: "Install LLVM/Clang (Windows)"
       if: startsWith( matrix.runner, 'windows' )
