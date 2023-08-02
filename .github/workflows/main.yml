@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - '*'
+    tags:
+      - '*'
   pull_request:
     branches:
       - '*'
@@ -175,6 +177,15 @@ jobs:
             libavcodec-dev libavdevice-dev libavfilter-dev libavformat-dev libavutil-dev libswresample-dev libswscale-dev \
             libcurl4-openssl-dev
         fi
+      run: |
+        # Apply patches to obs-studio
+        pushd "${{ github.workspace }}/third-party/obs-studio" > /dev/null
+        for f in ../../patches/obs-studio/*.patch; do
+          echo "Applying patch '${f}''..."
+          [ -e "$f" ] || continue
+          git apply "$f"
+        done
+        popd > /dev/null
 
     - name: "Dependency: OBS Libraries (Cache)"
       id: obs-cache
