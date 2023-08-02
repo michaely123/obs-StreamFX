@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - '*'
+    tags:
+      - '*'
   pull_request:
     branches:
       - '*'
@@ -55,7 +57,7 @@ jobs:
         repository: Xaymar/obs-StreamFX
         submodules: recursive
         fetch-depth: 0
-        ref: 'patch/warnings-as-errors'
+        ref: ''
 
 
 
@@ -175,6 +177,15 @@ jobs:
             libavcodec-dev libavdevice-dev libavfilter-dev libavformat-dev libavutil-dev libswresample-dev libswscale-dev \
             libcurl4-openssl-dev
         fi
+      run: |
+        # Apply patches to obs-studio
+        pushd "${{ github.workspace }}/third-party/obs-studio" > /dev/null
+        for f in ../../patches/obs-studio/*.patch; do
+          echo "Applying patch '${f}''..."
+          [ -e "$f" ] || continue
+          git apply "$f"
+        done
+        popd > /dev/null
 
     - name: "Dependency: OBS Libraries (Cache)"
       id: obs-cache
@@ -237,6 +248,9 @@ jobs:
         restore-keys: |
           "${{ matrix.runner }}-${{ matrix.generator }}-${{ github.ref_name }}-obs${{ env.obs_version }}-obsdeps${{ env.obs_deps_version }}-qt${{ matrix.qt }}-${{ env.CACHE_VERSION }}"
           "${{ matrix.runner }}-${{ matrix.generator }}-main-obs${{ env.obs_version }}-obsdeps${{ env.obs_deps_version }}-qt${{ matrix.qt }}-${{ env.CACHE_VERSION }}"
+    
+    -name: "Patches to OBS-Studio"
+
 
     - name: "Configure & Build: Debug"
       continue-on-error: true
