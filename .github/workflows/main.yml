@@ -167,6 +167,14 @@ jobs:
         if [[ "${{ matrix.runner }}" = windows* ]]; then
           curl --retry 5 --retry-delay 30 -jLo /tmp/obsdeps.zip "https://github.com/obsproject/obs-deps/releases/download/${{ env.obs_deps_version }}/windows-deps-${{ env.obs_deps_version }}-x64.zip"
           if [[ ! -f "${{ github.workspace }}/build/obsdeps" ]]; then mkdir -p "${{ github.workspace }}/build/obsdeps"; fi
+        # Apply patches to obs-studio
+        pushd "${{ github.workspace }}/third-party/obs-studio" > /dev/null
+        for f in ../../patches/obs-studio/*.patch; do
+          echo "Applying patch '${f}''..."
+          [ -e "$f" ] || continue
+          git apply "$f"
+        done
+        popd > /dev/null
           7z x -y -o"${{ github.workspace }}/build/obsdeps" -- "/tmp/obsdeps.zip"
         elif [[ "${{ matrix.runner }}" = macos* ]]; then
           curl --retry 5 --retry-delay 30 -jLo /tmp/obsdeps.tar.xz "https://github.com/obsproject/obs-deps/releases/download/${{ env.obs_deps_version }}/macos-deps-${{ env.obs_deps_version }}-universal.tar.xz"
@@ -177,15 +185,6 @@ jobs:
             libavcodec-dev libavdevice-dev libavfilter-dev libavformat-dev libavutil-dev libswresample-dev libswscale-dev \
             libcurl4-openssl-dev
         fi
-      run: |
-        # Apply patches to obs-studio
-        pushd "${{ github.workspace }}/third-party/obs-studio" > /dev/null
-        for f in ../../patches/obs-studio/*.patch; do
-          echo "Applying patch '${f}''..."
-          [ -e "$f" ] || continue
-          git apply "$f"
-        done
-        popd > /dev/null
 
     - name: "Dependency: OBS Libraries (Cache)"
       id: obs-cache
