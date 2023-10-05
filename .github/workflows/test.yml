@@ -177,7 +177,6 @@ jobs:
         cmake --build "build/ci" --config ${{ env.CMAKE_BUILD_TYPE }} --target StreamFX
 
 
-
     - name: "Packaging"
       shell: bash
       run: |
