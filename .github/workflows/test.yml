@@ -182,13 +182,13 @@ jobs:
       shell: bash
       run: |
         mkdir "${{ github.workspace }}/build/package"
-        #cmake --build "${{ github.workspace }}/build/ci" --config Debug --target StreamFX
-        cmake --build "${{ github.workspace }}/build/ci" --config RelWithDebInfo --target ALL_BUILD
+      #cmake --build "${{ github.workspace }}/build/ci/Debug" --config Debug --target StreamFX
+        cmake --build "${{ github.workspace }}/build/ci/RelWithDebInfo" --config RelWithDebInfo --target StreamFX
     - name: "Packaging (Windows)"
       if: startsWith( matrix.runner, 'windows' )
       shell: cmd
       run: |
-        "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" /V10 ".\build\ci\installer.iss"
+        "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" /V10 ".\build\ci\RelWithDebInfo\installer.iss"
 
     - name: "Artifacts"
       uses: actions/upload-artifact@v3
