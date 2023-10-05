@@ -181,7 +181,7 @@ jobs:
       shell: bash
       run: |
         mkdir "${{ github.workspace }}/build/package"
-      #cmake --build "${{ github.workspace }}/build/ci/Debug" --config Debug --target StreamFX
+        # cmake --build "${{ github.workspace }}/build/ci/Debug" --config Debug --target StreamFX
         cmake --build "${{ github.workspace }}/build/ci/RelWithDebInfo" --config RelWithDebInfo --target StreamFX
     - name: "Packaging (Windows)"
       if: startsWith( matrix.runner, 'windows' )
