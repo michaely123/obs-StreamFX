@@ -47,8 +47,10 @@ jobs:
     - name: "Clone"
       uses: actions/checkout@v3
       with:
+        repository: Xaymar/obs-StreamFX
         submodules: recursive
         fetch-depth: 0
+        ref: ''
     - name: "Gather Information"
       id: info
       shell: bash
