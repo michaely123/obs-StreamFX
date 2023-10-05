@@ -187,7 +187,8 @@ jobs:
       if: startsWith( matrix.runner, 'windows' )
       shell: cmd
       run: |
-        "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" /V10 ".\build\ci\installer.iss" /O "D:\a\obs-StreamFX\obs-StreamFX/build/package"
+        "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" /V10 ".\build\ci\installer.iss"
+        copy "D:\a\obs-StreamFX\obs-StreamFX\build\ci\StreamFX-*.exe" "D:\a\obs-StreamFX\obs-StreamFX/build/package"
 
     - name: "Artifacts"
       uses: actions/upload-artifact@v3
