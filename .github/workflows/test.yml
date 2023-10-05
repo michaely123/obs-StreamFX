@@ -162,13 +162,13 @@ jobs:
           -DQt${{ matrix.qt }}_DIR="${{ github.workspace }}/build/qt" \
           -DFFmpeg_DIR="${{ github.workspace }}/build/obsdeps" \
           -DCURL_DIR="${{ github.workspace }}/build/obsdeps"
-    #- name: "Build: Debug"
-      #continue-on-error: true
-      #shell: bash
-      #env:
-        #CMAKE_BUILD_TYPE: "Debug"
-      #run: |
-        #cmake --build "build/ci" --config ${{ env.CMAKE_BUILD_TYPE }} --target StreamFX
+    - name: "Build: Debug"
+      continue-on-error: true
+      shell: bash
+      env:
+        CMAKE_BUILD_TYPE: "Debug"
+      run: |
+        cmake --build "build/ci" --config ${{ env.CMAKE_BUILD_TYPE }} --target install
     - name: "Build: Release"
       shell: bash
       env:
@@ -180,9 +180,9 @@ jobs:
     - name: "Packaging"
       shell: bash
       run: |
-        mkdir "${{ github.workspace }}/build/package"
-        # cmake --build "${{ github.workspace }}/build/ci/Debug" --config Debug --target StreamFX
-        cmake --build "${{ github.workspace }}/build/ci" --config RelWithDebInfo --target ALL_BUILD
+         mkdir "${{ github.workspace }}/build/package"
+         cmake --build "${{ github.workspace }}/build/ci" --config Debug --target ALL_BUILD
+         cmake --build "${{ github.workspace }}/build/ci" --config RelWithDebInfo --target ALL_BUILD
     - name: "Packaging (Windows)"
       if: startsWith( matrix.runner, 'windows' )
       shell: cmd
