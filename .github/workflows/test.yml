@@ -168,24 +168,16 @@ jobs:
       env:
         CMAKE_BUILD_TYPE: "Debug"
       run: |
-        cmake --build "build/ci" --config ${{ env.CMAKE_BUILD_TYPE }} --target StreamFX
-        
-    - name: "Build: Debug - Copy"
-      shell: cmd
-      run: |
-        copy "${{ github.workspace }}/build/ci/installer.iss" "${{ github.workspace }}/build/ci/Debug"
+        cmake --build "build/ci" --config ${{ env.CMAKE_BUILD_TYPE }} --target install
+        cp "${{ github.workspace }}/build/ci/installer.iss" "${{ github.workspace }}/build/ci/${{ env.CMAKE_BUILD_TYPE }}"
 
-      
     - name: "Build: Release"
       shell: bash
       env:
         CMAKE_BUILD_TYPE: "RelWithDebInfo"
       run: |
-        cmake --build "build/ci" --config ${{ env.CMAKE_BUILD_TYPE }} --target install
-
-    - name: "Build: Release - Copy"
-      shell: cmd
-      run: |
+        cmake --build "build/ci" --config ${{ env.CMAKE_BUILD_TYPE }} --target StreamFX
+        cp "${{ github.workspace }}/build/ci/installer.iss" "${{ github.workspace }}/build/ci/${{ env.CMAKE_BUILD_TYPE }}"
          
     - name: "Packaging (Windows)"
       if: startsWith( matrix.runner, 'windows' )
