@@ -31,11 +31,13 @@ jobs:
             CMAKE_SYSTEM_VERSION: "10.0.20348.0"
             CMAKE_GENERATOR: "Visual Studio 17 2022"
             CMAKE_GENERATOR_PLATFORM: "x64"
+            package_name: "windows"
           - compiler: "Clang"
             CMAKE_SYSTEM_VERSION: "10.0.20348.0"
             CMAKE_GENERATOR: "Visual Studio 17 2022"
             CMAKE_GENERATOR_TOOLSET: "ClangCL"
             CMAKE_GENERATOR_PLATFORM: "x64"
+            package_name: "windows"
     runs-on: "${{ matrix.runner }}"
     name: "${{ matrix.name }} (${{ matrix.compiler }})"
     env:
@@ -51,8 +53,13 @@ jobs:
         submodules: recursive
         fetch-depth: 0
         ref: ''
-
-
+        
+    - name: "Install InnoSetup (Windows)"
+      if: startsWith( matrix.runner, 'windows' )
+      run: |
+        curl "-kL" "https://jrsoftware.org/download.php/is.exe" "-f" "--retry" "5" "-o" "inno.exe"
+        .\inno.exe /VERYSILENT /SP- /SUPPRESSMSGBOXES /NORESTART
+        
     - name: "Gather Information"
       id: info
       shell: bash
@@ -143,47 +150,83 @@ jobs:
           --install "${{ github.workspace }}/build/obs" \
           --config RelWithDebInfo \
           --component obs_libraries
-    - name: "Configure"
+
+          
+    - name: "Configure: Debug"
       continue-on-error: true
       shell: bash
+      env:
+        CMAKE_BUILD_TYPE: "Debug"
       run: |
         cmake \
           -S "${{ github.workspace }}" \
-          -B "${{ github.workspace }}/build/ci" \
+          -B "${{ github.workspace }}/build/ci/debug" \
           -DCMAKE_SYSTEM_VERSION="${{ env.CMAKE_SYSTEM_VERSION }}" \
           -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON \
           -Dlibobs_DIR="${{ github.workspace }}/build/obs/install" \
           -DQt${{ matrix.qt }}_DIR="${{ github.workspace }}/build/qt" \
           -DFFmpeg_DIR="${{ github.workspace }}/build/obsdeps" \
-          -DCURL_DIR="${{ github.workspace }}/build/obsdeps"
+          -DCURL_DIR="${{ github.workspace }}/build/obsdeps" \
+          -DCMAKE_BUILD_TYPE="${{ env.CMAKE_BUILD_TYPE }}" \
+          -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/build/debug/install" \
+          -DPACKAGE_NAME="streamfx-${{ matrix.package_name }}-debug" \
+          -DPACKAGE_PREFIX="${{ github.workspace }}/build/package" \
+          -DENABLE_CLANG=TRUE -DCLANG_PATH="${{ env.CLANG_PATH }}" \
+          -DENABLE_PROFILING=OFF
+    
+    - name: "Configure: Release"
+      continue-on-error: true
+      shell: bash
+      env:
+        CMAKE_BUILD_TYPE: "RelWithDebInfo"
+      run: |
+        cmake \
+          -S "${{ github.workspace }}" \
+          -B "${{ github.workspace }}/build/ci/release" \
+          -DCMAKE_SYSTEM_VERSION="${{ env.CMAKE_SYSTEM_VERSION }}" \
+          -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON \
+          -Dlibobs_DIR="${{ github.workspace }}/build/obs/install" \
+          -DQt${{ matrix.qt }}_DIR="${{ github.workspace }}/build/qt" \
+          -DFFmpeg_DIR="${{ github.workspace }}/build/obsdeps" \
+          -DCURL_DIR="${{ github.workspace }}/build/obsdeps" \
+          -DCMAKE_BUILD_TYPE="${{ env.CMAKE_BUILD_TYPE }}" \
+          -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/build/release/install" \
+          -DPACKAGE_NAME="streamfx-${{ matrix.package_name }}" \
+          -DPACKAGE_PREFIX="${{ github.workspace }}/build/package" \
+          -DENABLE_CLANG=TRUE -DCLANG_PATH="${{ env.CLANG_PATH }}" \
+          -DENABLE_PROFILING=OF
+
     - name: "Build: Debug"
       continue-on-error: true
       shell: bash
       env:
         CMAKE_BUILD_TYPE: "Debug"
       run: |
-        cmake --build "build/ci" --config ${{ env.CMAKE_BUILD_TYPE }} --target StreamFX
+        cmake --build "build/ci/debug" --config ${{ env.CMAKE_BUILD_TYPE }} --target install
+
     - name: "Build: Release"
+      continue-on-error: true
       shell: bash
       env:
         CMAKE_BUILD_TYPE: "RelWithDebInfo"
       run: |
-        cmake --build "build/ci" --config ${{ env.CMAKE_BUILD_TYPE }} --target StreamFX
-
-
-      - name: "Packaging"
+        cmake --build "build/ci/release" --config ${{ env.CMAKE_BUILD_TYPE }} --target install
+        
+    - name: "Packaging"
+      continue-on-error: true
       shell: bash
       run: |
-        mkdir "${{ github.workspace }}/build/package"
-        cmake --build "${{ github.workspace }}/build/ci" --config Debug --target PACKAGE_7Z
-        cmake --build "${{ github.workspace }}/build/ci" --config RelWithDebInfo --target PACKAGE_7Z
+         mkdir "${{ github.workspace }}/build/package"
+         cmake --build "${{ github.workspace }}/build/ci/debug" --config Debug --target install
+         cmake --build "${{ github.workspace }}/build/ci/release" --config RelWithDebInfo --target install
+         
     - name: "Packaging (Windows)"
       if: startsWith( matrix.runner, 'windows' )
       shell: cmd
       run: |
-        "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" /V10 ".\build\debug\installer.iss"
-        "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" /V10 ".\build\release\installer.iss"
-
+        "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" /V10 ".\build\ci\debug\installer.iss"
+        "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" /V10 ".\build\ci\release\installer.iss"
+   
     - name: "Artifacts"
       uses: actions/upload-artifact@v3
       with:
