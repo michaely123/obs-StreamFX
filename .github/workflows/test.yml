@@ -181,7 +181,7 @@ jobs:
       shell: bash
       run: |
          mkdir "${{ github.workspace }}/build/package"
-         cmake -S "${{ github.workspace }}/build/ci" -B "${{ github.workspace }}/build/ci/Debug"
+         cmake -B "${{ github.workspace }}/build/ci/Debug"
          cmake --build "${{ github.workspace }}/build/ci" --config Debug --target StreamFX
          cmake --build "${{ github.workspace }}/build/ci" --config RelWithDebInfo --target install
     - name: "Packaging (Windows)"
