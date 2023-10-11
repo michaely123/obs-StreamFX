@@ -57,7 +57,6 @@ jobs:
       run: |
         curl "-kL" "https://jrsoftware.org/download.php/is.exe" "-f" "--retry" "5" "-o" "inno.exe"
         .\inno.exe /VERYSILENT /SP- /SUPPRESSMSGBOXES /NORESTART
-
         
     - name: "Gather Information"
       id: info
@@ -161,14 +160,21 @@ jobs:
           -Dlibobs_DIR="${{ github.workspace }}/build/obs/install" \
           -DQt${{ matrix.qt }}_DIR="${{ github.workspace }}/build/qt" \
           -DFFmpeg_DIR="${{ github.workspace }}/build/obsdeps" \
-          -DCURL_DIR="${{ github.workspace }}/build/obsdeps"
-    #- name: "Build: Debug"
-      #continue-on-error: true
-      #shell: bash
-      #env:
-        #CMAKE_BUILD_TYPE: "Debug"
-      #run: |
-        #cmake --build "build/ci" --config ${{ env.CMAKE_BUILD_TYPE }} --target install
+          -DCURL_DIR="${{ github.workspace }}/build/obsdeps" \
+
+          
+          -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/build/ci/install" \
+          -DPACKAGE_NAME="streamfx-${{ matrix.package_name }}" \
+          -DPACKAGE_PREFIX="${{ github.workspace }}/build/package"
+
+          
+    - name: "Build: Debug"
+      continue-on-error: true
+      shell: bash
+      env:
+        CMAKE_BUILD_TYPE: "Debug"
+      run: |
+        cmake --build "build/ci" --config ${{ env.CMAKE_BUILD_TYPE }} --target StreamFX
     - name: "Build: Release"
       shell: bash
       env:
@@ -182,13 +188,13 @@ jobs:
       run: |
          mkdir "${{ github.workspace }}/build/package"
          #cmake --build "${{ github.workspace }}/build/ci" --config Debug --target ALL_BUILD
-         cmake --build "${{ github.workspace }}/build/ci" --config RelWithDebInfo --target ALL_BUILD
+         #cmake --build "${{ github.workspace }}/build/ci" --config RelWithDebInfo --target ALL_BUILD
     - name: "Packaging (Windows)"
       if: startsWith( matrix.runner, 'windows' )
       shell: cmd
       run: |
         "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" /V10 ".\build\ci\installer.iss"
-        copy "D:\a\obs-StreamFX\obs-StreamFX\build\ci\StreamFX-*.exe" "D:\a\obs-StreamFX\obs-StreamFX/build/package"
+        #copy "D:\a\obs-StreamFX\obs-StreamFX\build\ci\StreamFX-*.exe" "D:\a\obs-StreamFX\obs-StreamFX/build/package"
 
     - name: "Artifacts"
       uses: actions/upload-artifact@v3
