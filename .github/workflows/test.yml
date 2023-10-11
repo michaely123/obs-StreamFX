@@ -168,7 +168,7 @@ jobs:
       env:
         CMAKE_BUILD_TYPE: "Debug"
       run: |
-        cmake --build "build/ci" --config ${{ env.CMAKE_BUILD_TYPE }} --target install
+        cmake --build "build/ci" --config ${{ env.CMAKE_BUILD_TYPE }} --target StreamFX
         cp "${{ github.workspace }}/build/ci/installer.iss" "${{ github.workspace }}/build/ci/${{ env.CMAKE_BUILD_TYPE }}"
 
     - name: "Build: Release"
@@ -176,7 +176,7 @@ jobs:
       env:
         CMAKE_BUILD_TYPE: "RelWithDebInfo"
       run: |
-        cmake --build "build/ci" --config ${{ env.CMAKE_BUILD_TYPE }} --target StreamFX
+        cmake --build "build/ci" --config ${{ env.CMAKE_BUILD_TYPE }} --target install
         cp "${{ github.workspace }}/build/ci/installer.iss" "${{ github.workspace }}/build/ci/${{ env.CMAKE_BUILD_TYPE }}"
          
     - name: "Packaging (Windows)"
@@ -184,6 +184,8 @@ jobs:
       shell: cmd
       run: |
         "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" /V10 ".\build\ci\Debug\installer.iss"
+        copy "D:\a\obs-StreamFX\obs-StreamFX\build\ci\StreamFX-*.exe" "D:\a\obs-StreamFX\obs-StreamFX/build/package"
+        "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" /V10 ".\build\ci\RelWithDebInfo\installer.iss"
         copy "D:\a\obs-StreamFX\obs-StreamFX\build\ci\StreamFX-*.exe" "D:\a\obs-StreamFX\obs-StreamFX/build/package"
 
     - name: "Artifacts"
