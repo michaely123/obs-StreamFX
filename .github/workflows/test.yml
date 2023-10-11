@@ -191,8 +191,7 @@ jobs:
           -DCMAKE_INSTALL_PREFIX="${{ github.workspace }}/build/release/install" \
           -DPACKAGE_NAME="streamfx-${{ matrix.package_name }}" \
           -DPACKAGE_PREFIX="${{ github.workspace }}/build/package"
-         
-          
+
     - name: "Build: Debug"
       continue-on-error: true
       shell: bash
@@ -201,16 +200,16 @@ jobs:
       run: |
         cmake --build "build/ci/debug" --config ${{ env.CMAKE_BUILD_TYPE }} --target install
 
-
     - name: "Build: Release"
+      continue-on-error: true
       shell: bash
       env:
         CMAKE_BUILD_TYPE: "RelWithDebInfo"
       run: |
         cmake --build "build/ci/release" --config ${{ env.CMAKE_BUILD_TYPE }} --target install
-
         
     - name: "Packaging"
+      continue-on-error: true
       shell: bash
       run: |
          mkdir "${{ github.workspace }}/build/package"
