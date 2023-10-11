@@ -206,7 +206,14 @@ jobs:
         CMAKE_BUILD_TYPE: "RelWithDebInfo"
       run: |
         cmake --build "build/ci/release" --config ${{ env.CMAKE_BUILD_TYPE }} --target install
+
         
+    - name: "Packaging"
+      shell: bash
+      run: |
+         mkdir "${{ github.workspace }}/build/package"
+         cmake --build "${{ github.workspace }}/build/ci" --config Debug --target ALL_BUILD
+         cmake --build "${{ github.workspace }}/build/ci" --config RelWithDebInfo --target ALL_BUILD 
          
     - name: "Packaging (Windows)"
       if: startsWith( matrix.runner, 'windows' )
