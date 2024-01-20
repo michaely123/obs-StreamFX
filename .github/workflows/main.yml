@@ -52,7 +52,7 @@ jobs:
         repository: Xaymar/obs-StreamFX
         submodules: recursive
         fetch-depth: 0
-        ref: 'bbcce86'
+        ref: ''
         
     - name: "Install InnoSetup (Windows)"
       if: startsWith( matrix.runner, 'windows' )
