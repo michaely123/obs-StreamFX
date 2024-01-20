@@ -47,12 +47,12 @@ jobs:
       CMAKE_SYSTEM_VERSION: "${{ matrix.CMAKE_SYSTEM_VERSION }}"
     steps:
     - name: "Clone"
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         repository: Xaymar/obs-StreamFX
         submodules: recursive
         fetch-depth: 0
-        ref: ''
+        ref: 'root'
         
     - name: "Install InnoSetup (Windows)"
       if: startsWith( matrix.runner, 'windows' )
