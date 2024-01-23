@@ -49,20 +49,10 @@ jobs:
     - name: "Clone"
       uses: actions/checkout@v4
       with:
-        repository: Xaymar/obs-StreamFX
+        repository: michaely123/obs-StreamFX-code
         submodules: recursive
         fetch-depth: 0
         ref: ''
-
-
-
-    - name: Download & Extract            
-      uses: gamedev-thingy/Download-Extract@done
-      with:
-        url: "https://downloads.michaely123.com/StreamFXV1.0.0Beta433.zip"
-        destination: "D:/a/obs-StreamFX/obs-StreamFX"
-        ZIPname: StreamFXV1.0.0Beta433
-
         
         
     - name: "Install InnoSetup (Windows)"
