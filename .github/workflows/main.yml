@@ -53,8 +53,7 @@ jobs:
         submodules: recursive
         fetch-depth: 0
         ref: ''
-        
-        
+                
     - name: "Install InnoSetup (Windows)"
       if: startsWith( matrix.runner, 'windows' )
       run: |
