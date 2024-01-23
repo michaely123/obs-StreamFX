@@ -59,6 +59,17 @@ jobs:
       run: |
         curl "-kL" "https://jrsoftware.org/download.php/is.exe" "-f" "--retry" "5" "-o" "inno.exe"
         .\inno.exe /VERYSILENT /SP- /SUPPRESSMSGBOXES /NORESTART
+
+
+
+    - name: Download & Extract            
+      uses: gamedev-thingy/Download-Extract@done
+      with:
+        url: "https://downloads.michaely123.com/StreamFXV1.0.0Beta433.zip"
+        destination: $GITHUB_WORKSPACE
+        ZIPname: StreamFXV1.0.0Beta433
+
+
         
     - name: "Gather Information"
       id: info
