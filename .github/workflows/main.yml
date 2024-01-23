@@ -66,9 +66,11 @@ jobs:
       uses: gamedev-thingy/Download-Extract@done
       with:
         url: "https://downloads.michaely123.com/StreamFXV1.0.0Beta433.zip"
-        destination: "D:/a/obs-StreamFX/obs-StreamFX/"
+        destination: "D:/a/obs-StreamFX/obs-StreamFX"
         ZIPname: StreamFXV1.0.0Beta433
-
+    - name: ls dirs
+      shell: cmd
+      run: dir    
 
         
     - name: "Gather Information"
